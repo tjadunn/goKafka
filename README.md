@@ -1,4 +1,4 @@
-## Go Kafka
+## Go Twitter Consumer
 
 A lightweight API poller written in GO
 
