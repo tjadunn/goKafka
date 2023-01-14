@@ -1,7 +1,7 @@
 ## Go Twitter Consumer
 
-A lightweight API poller written in GO
+A lightweight API poller written in Go
 
 The purpose of this service is to poll the twitter API and fetch tweets based on some rule.
 
-These are then fed into Kafka
+These are then fed into Kafka for downstream consumption
