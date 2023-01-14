@@ -8,6 +8,7 @@ import (
     "bufio"
     "strings"
     "net/http"
+    "github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 // The below function long polls the API and awaits results
@@ -87,15 +88,38 @@ func main () {
 
     if app_bearer_key == "" {
         fmt.Println("Please provide a bearer key!")
-        return
+        os.Exit(1)
     }
 
     bearer_key := "Bearer " + app_bearer_key
 
+    p, err := kafka.NewProducer(&kafka.ConfigMap{
+        "bootstrap.servers": "localhost:9092",
+        "acks": "all",
+    })
+
+    defer p.Close()
+
+    if err != nil {
+        fmt.Printf("Failed to create producer: %s\n", err)
+        os.Exit(1)
+    }
+
     go tweets_worker(tweets_chan, bearer_key)
+
+    topic := "musical_tweets"
+    // Channel to receive delivery reports as we are writing async
+    delivery_chan := make(chan kafka.Event, 10000)
 
     for tweet := range tweets_chan {
         fmt.Println(tweet)
+
+        err = p.Produce(&kafka.Message{
+            TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
+            Value: []byte(tweet)},
+            delivery_chan,
+        )
+
     }
 
 }
