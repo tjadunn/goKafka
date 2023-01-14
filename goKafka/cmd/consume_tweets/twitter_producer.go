@@ -10,9 +10,9 @@ import (
     "net/http"
 )
 
-// The below function does actual API polling and await tweet results
+// The below function long polls the API and awaits results
 // The Tweets returned are dependent on the rules set linked to the developer token
-// To view these rules you can run
+// To view/set/delete rules see below
 //
 //
 //
