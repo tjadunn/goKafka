@@ -1,16 +1,16 @@
 package main 
 
 import (
+    "os"
     "fmt"
     "bufio"
     "strings"
     "net/http"
 )
 
-func tweets_worker(results chan <- string) error{
+func tweets_worker(results chan <- string, bearer_key string) error{
 
     client := &http.Client{}
-    bearer_key := "Bearer AAAAAAAAAAAAAAAAAAAAADTVkgEAAAAATsLsSVeP45Qa9JBm2Yj0SjN0QOY%3DhIl0nTSbx8M6K0EX3Mh3mf1fBvgaD3zzBws4SkXPolVjC0MpSm"
 
     req, err := http.NewRequest("GET", "https://api.twitter.com/2/tweets/search/stream", nil)
 
@@ -43,7 +43,16 @@ func tweets_worker(results chan <- string) error{
 func main () {
     tweets_chan := make(chan string)
 
-    go tweets_worker(tweets_chan)
+    app_bearer_key := os.Getenv("APP_BEARER_KEY")
+
+    if app_bearer_key == "" {
+        fmt.Println("Please provide a bearer key!")
+        return
+    }
+
+    bearer_key := "Bearer " + app_bearer_key
+
+    go tweets_worker(tweets_chan, bearer_key)
 
     for tweet := range tweets_chan {
         fmt.Println(tweet)
