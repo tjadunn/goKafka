@@ -106,17 +106,17 @@ func tweets_worker(results chan <- []byte, bearer_key string) error{
 
         // Unpack the structure as it's a bit nested and nasty to process downstream
         err := json.Unmarshal([]byte(line), response)
-        if (err != nil) {
-            return err
-        }
-        // re serialise the results we want i.e. id and text
-        id_text_map := map[string]string{"id": response.Data.Id, "text": response.Data.Text}
-        result, err := json.Marshal(id_text_map)
 
-        if (err != nil) {
-            return err
+        // we don't actually care about the error, it's only 1 tweet if it fails
+        if (err == nil) {
+            // re serialise the results we want i.e. id and text
+            id_text_map := map[string]string{"id": response.Data.Id, "text": response.Data.Text}
+            result, err := json.Marshal(id_text_map)
+
+            if (err == nil) {
+                results <- result
+            }
         }
-        results <- result
     }
 
     close(results)
