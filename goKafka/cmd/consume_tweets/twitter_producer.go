@@ -1,4 +1,5 @@
 // Poll the Twitter FilteredStream API  using a goroutine and feed the result into Kafka
+// Pushes to a topic in the form {"id":1312312,"text": hello this is a tweet}
 
 package main
 
@@ -14,7 +15,7 @@ import (
 
 // The below function long polls the API and awaits results
 // The Tweets returned are dependent on the rules set linked to the developer token
-// To view/set/delete rules see below
+// To view/set/delete rules see following examples 
 //
 //
 //
