@@ -8,6 +8,7 @@ import (
     "bufio"
     "strings"
     "net/http"
+    "encoding/json"
     "github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
@@ -47,7 +48,35 @@ import (
 // See https://developer.twitter.com/en/docs/twitter-api/tweets/filtered-stream/integrate/build-a-rule#build
 // for more info on building rules
 
-func tweets_worker(results chan <- string, bearer_key string) error{
+
+// Define structs to match the following response structure
+//{
+//  "data":{
+//    "edit_history_tweet_ids":["1616143608742305793"],
+//    "id":"1616143608742305793",
+//    "text":"https://t.co/MElLfqOi4y - @YouTubeMusic"},
+//    "matching_rules":[
+//      {"id":"1614419630856015872","tag":""
+//      }
+//    ]
+// }
+//
+
+type matching_rules struct {
+    Id string
+    Tag string
+}
+
+type tweet_api_response struct {
+    Data struct {
+        Edit_history_tweet_ids []string
+        Id string
+        Text string
+    }
+    Matching_rules []matching_rules
+}
+
+func tweets_worker(results chan <- []byte, bearer_key string) error{
 
     client := &http.Client{}
 
@@ -69,10 +98,25 @@ func tweets_worker(results chan <- string, bearer_key string) error{
     // Long poll the endpoint
     bs := bufio.NewScanner(resp.Body)
 
+    response := &tweet_api_response{}
+
     // Continuously iterate and await new tweets
     for bs.Scan() {
         line := strings.TrimSpace(bs.Text())
-        results <- line
+
+        // Unpack the structure as it's a bit nested and nasty to process downstream
+        err := json.Unmarshal([]byte(line), response)
+        if (err != nil) {
+            return err
+        }
+        // re serialise the results we want i.e. id and text
+        id_text_map := map[string]string{"id": response.Data.Id, "text": response.Data.Text}
+        result, err := json.Marshal(id_text_map)
+
+        if (err != nil) {
+            return err
+        }
+        results <- result
     }
 
     close(results)
@@ -81,7 +125,7 @@ func tweets_worker(results chan <- string, bearer_key string) error{
 
 
 func main () {
-    tweets_chan := make(chan string)
+    tweets_chan := make(chan []byte)
 
     // Get this from your Twitter devloper account
     app_bearer_key := os.Getenv("APP_BEARER_KEY")
@@ -112,11 +156,11 @@ func main () {
     delivery_chan := make(chan kafka.Event, 10000)
 
     for tweet := range tweets_chan {
-        fmt.Println(tweet)
+        fmt.Println(string(tweet))
 
         err = p.Produce(&kafka.Message{
             TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
-            Value: []byte(tweet)},
+            Value: tweet},
             delivery_chan,
         )
 
